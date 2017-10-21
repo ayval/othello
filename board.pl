@@ -138,6 +138,15 @@ printstatus(Board):-
 	write("BlackCount:"),writeln(Blacks),
 	write("WhiteCount:"),writeln(Whites).
 
+
+printPossibleMoves([]):-
+	writeln("").
+
+printPossibleMoves([c(X,Y)|Rest]):-
+	write("("),write(X),write(","),write(Y),write(")"),
+	printPossibleMoves(Rest).
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
@@ -200,11 +209,8 @@ isValidMoveDirection(Board,Player,X,Y,XD,YD,XNR,YNR):-
 
 isValidMove(Board,X,Y,Player):-
 	isValidCell(X,Y),!,
-	writeln("Passed valid cell check"),
 	isCellEmpty(Board,X,Y),!,
-	writeln("Passed cell empty check"),
 %	hasOpponentColorNeighbour(Board,X,Y,Player),
-	writeln("Passed hasOpponentColorNeighbour"),
 
 	(
 		isValidMoveDirection(Board,Player,X,Y, 1, 1,_,_),!;
@@ -215,8 +221,7 @@ isValidMove(Board,X,Y,Player):-
 		isValidMoveDirection(Board,Player,X,Y, 1,-1,_,_),!;
 		isValidMoveDirection(Board,Player,X,Y, 0,-1,_,_),!;
 		isValidMoveDirection(Board,Player,X,Y,-1,-1,_,_)
-	),!,
-	writeln("This is a valid move").
+	),!.
 
 colorLine(Board,Color,X,Y,_,_,X,Y,Newboard):-
 	setCell(Board,X,Y,Color,Newboard).
@@ -267,10 +272,27 @@ getInput(X,Msg):-
 	writeln("Invalid Input"),
 	getInput(X,Msg).
 
+getAllValidMoves(Board,Player,ValidMoves):-
+	findall(c(X,Y),(between(0,7,X),between(0,7,Y)),MoveMatrix),
+	getAllValidMoves(Board,Player,MoveMatrix,ValidMoves).
+
+getAllValidMoves(_,_,[],[]).
+
+getAllValidMoves(Board,Player,[c(X,Y)|MoveList],[c(X,Y)|ValidMoves]):-
+	isValidMove(Board,X,Y,Player),!,
+	getAllValidMoves(Board,Player,MoveList,ValidMoves).
+
+
+getAllValidMoves(Board,Player,[c(X,Y)|MoveList],ValidMoves):-
+	getAllValidMoves(Board,Player,MoveList,ValidMoves).
+
 
 
 humanMove(Board,Player,NextPlayer,NewBoard):-
+	getAllValidMoves(Board,Player,ValidMoves),
 	write("This is "), write(Player), writeln('s move'),
+	write("Hint, possible moves are:"),
+	printPossibleMoves(ValidMoves),
 	getInput(X,"Enter X:"),
 	getInput(Y,"Enter Y:"),
 	isValidMove(Board,X,Y,Player),!,

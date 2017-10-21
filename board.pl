@@ -9,7 +9,7 @@ init_board(Board):-
 		[empty,empty,empty,empty,empty,empty,empty,empty],
 		[empty,empty,empty,empty,empty,empty,empty,empty],
 		[empty,empty,empty,empty,empty,empty,empty,empty],
-		[empty,empty,empty,white,empty,empty,empty,empty],
+		[empty,empty,empty,empty,empty,empty,empty,empty],
 		[empty,empty,empty,empty,empty,empty,empty,empty],
 		[empty,empty,empty,empty,empty,empty,empty,empty],
 		[empty,empty,empty,empty,empty,empty,empty,empty]
@@ -23,12 +23,16 @@ init_board(Board):-
 
 
 
-
-
-
 getCell(Board,X,Y,Cell):-
+	isValidCell(X,Y),
 	nth0(Y,Board,Row),
-	nth0(X,Row,Cell).
+	nth0(X,Row,Cell),!;
+	Cell=empty.
+
+isValidCell(X,Y):-
+	X>=0,X=<7,Y>=0,Y=<7.
+
+
 
 
 setItemInList([_|RestOfList],0,NewValue,[NewValue|RestOfList]).
@@ -144,7 +148,7 @@ opponent(white,black).
 opponent(black,white).
 
 isCellEmpty(Board,X,Y):-
-	X<0;X>7;Y<0;Y>7;getCell(Board,X,Y,empty).
+	getCell(Board,X,Y,empty).
 
 areAllNeighboursEmpty(Board,X,Y):-
 	XT is X+1,XB is X-1,YT is X+1,YB is Y-1,
@@ -158,19 +162,21 @@ areAllNeighboursEmpty(Board,X,Y):-
 	isCellEmpty(Board,XT,YT).
 
 hasOpponentColorNeighbour(Board,X,Y,Color):-
+	writeln("Enter has oppponent color neighbour"),
 	(
 		XT is X+1,XB is X-1,YT is X+1,YB is Y-1,opponent(Color,OColor)
 	),
 	(	
-		getCell(Board,XB,YB,OColor),!;
-		getCell(Board,XB,Y,OColor),!;
-		getCell(Board,XB,YT,OColor),!;
-		getCell(Board,X,YB,OColor),!;
-		getCell(Board,X,YT,OColor),!;
-		getCell(Board,XT,YB,OColor),!;
-		getCell(Board,XT,Y,OColor),!;
-		getCell(Board,XT,YT,OColor)
-	).
+		(writeln(bla0),X>0,Y>0,getCell(Board,XB,YB,OColor));
+		(writeln(bla1),X>0,    getCell(Board,XB,Y,OColor));
+		(writeln(bla2),X>0,Y<7,getCell(Board,XB,YT,OColor));
+		(writeln(bla3),Y>0,    getCell(Board,X,YB,OColor));
+		(writeln(bla4),Y<7,    getCell(Board,X,YT,OColor));
+		(writeln(bla5),Y>0,X<7,getCell(Board,XT,YB,OColor));
+		(writeln(bla6),X<7,    getCell(Board,XT,Y,OColor));
+		(writeln(bla7),X<7,Y>7,getCell(Board,XT,YT,OColor))
+	),!,
+	writeln("\nhasOpponentColorNeighbour returned successfully\n").
 
 
 findNextCellSameColor(Board,Player,X,Y,XD,YD,XNR,YNR):-
@@ -183,31 +189,34 @@ findNextCellSameColor(Board,Player,X,Y,XD,YD,XNR,YNR):-
 	).
 
 isValidMoveDirection(Board,Player,X,Y,XD,YD,XNR,YNR):-
-	findNextCellSameColor(Board,Player,X,Y,XD,YD,XNR,YNR),
+	findNextCellSameColor(Board,Player,X,Y,XD,YD,XNR,YNR),!,
 	(
-		(X+XD+XD >  1);
-		(X+XD+XD < -1);
-		(Y+YD+YD >  1);
-		(Y+YD+YD < -1)
+		(XNR - X >  1);
+		(XNR - X < -1);
+		(YNR - Y >  1);
+		(YNR - Y < -1)
 	).
 
-
-isPotentialValidMove(Board,X,Y,Player):-
-	isCellEmpty(Board,X,Y),
-	hasOpponentColorNeighbour(Board,X,Y,Player).
 
 isValidMove(Board,X,Y,Player):-
-	isPotentialValidMove(Board,X,Y,Player),
+	isValidCell(X,Y),!,
+	writeln("Passed valid cell check"),
+	isCellEmpty(Board,X,Y),!,
+	writeln("Passed cell empty check"),
+%	hasOpponentColorNeighbour(Board,X,Y,Player),
+	writeln("Passed hasOpponentColorNeighbour"),
+
 	(
-		isValidMoveDirection(Board,Player,X,Y, 1, 1,_,_);
-		isValidMoveDirection(Board,Player,X,Y, 0, 1,_,_);
-		isValidMoveDirection(Board,Player,X,Y,-1, 1,_,_);
-		isValidMoveDirection(Board,Player,X,Y, 1, 0,_,_);
-		isValidMoveDirection(Board,Player,X,Y,-1, 0,_,_);
-		isValidMoveDirection(Board,Player,X,Y, 1,-1,_,_);
-		isValidMoveDirection(Board,Player,X,Y, 0,-1,_,_);
+		isValidMoveDirection(Board,Player,X,Y, 1, 1,_,_),!;
+		isValidMoveDirection(Board,Player,X,Y, 0, 1,_,_),!;
+		isValidMoveDirection(Board,Player,X,Y,-1, 1,_,_),!;
+		isValidMoveDirection(Board,Player,X,Y, 1, 0,_,_),!;
+		isValidMoveDirection(Board,Player,X,Y,-1, 0,_,_),!;
+		isValidMoveDirection(Board,Player,X,Y, 1,-1,_,_),!;
+		isValidMoveDirection(Board,Player,X,Y, 0,-1,_,_),!;
 		isValidMoveDirection(Board,Player,X,Y,-1,-1,_,_)
-	).
+	),!,
+	writeln("This is a valid move").
 
 colorLine(Board,Color,X,Y,_,_,X,Y,Newboard):-
 	setCell(Board,X,Y,Color,Newboard).
@@ -248,13 +257,29 @@ test():-
 	isValidMove(Board1,X,Y,black),move(Board1,X,Y,black,Board2),
 	printniceboard(Board2).
 
+
+getInput(X,Msg):-
+	writeln(Msg),
+	read(X),
+	integer(X),!.
+
+getInput(X,Msg):-
+	writeln("Invalid Input"),
+	getInput(X,Msg).
+
+
+
 humanMove(Board,Player,NextPlayer,NewBoard):-
 	write("This is "), write(Player), writeln('s move'),
-	writeln("Enter X:"),
-	read(X),
-	writeln("Enter Y:"),
-	read(Y),
-	isValidMove(Board,X,Y,Player) -> (move(Board,X,Y,Player,NewBoard),opponent(Player,NextPlayer);(NextPlayer=Player,NewBoard=Board)).
+	getInput(X,"Enter X:"),
+	getInput(Y,"Enter Y:"),
+	isValidMove(Board,X,Y,Player),!,
+	opponent(Player,NextPlayer),
+	move(Board,X,Y,Player,NewBoard).
+
+humanMove(Board,Player,NextPlayer,NewBoard):-
+		writeln("#########################\nIllegal move. Please play again.\n#########################\n"),
+		humanMove(Board,Player,NextPlayer,NewBoard).
 
 
 play():-

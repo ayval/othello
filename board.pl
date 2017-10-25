@@ -1,6 +1,3 @@
-
-
-
 %%%%%%%%%%% INIT THE BOARD %%%%%%%%%%%%%%%%%%%%%%
 
 init_board(Board):-
@@ -21,18 +18,36 @@ init_board(Board):-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+%%%%%%%%%%%%%% GAME OVER %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%If game is over, IsOver will be populate with the winning player color
+%Winner will be populate 'draw' in case of draw..
 
+game_over(Board,Winner):-
+	FullBoard is (8*8), %board size
+	countBlacks(Board,Blacks),
+	countWhites(Board,Whites),
+	Blacks + Whites =:= FullBoard,!,
+	(Blacks > Whites,
+	Winner = 'black'
+	;
+	Whites > Blacks,
+	Winner = 'white'
+	;
+	Winner = 'draw'
+	).
+	
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 getCell(Board,X,Y,Cell):-
 	isValidCell(X,Y),
 	nth0(Y,Board,Row),
-	nth0(X,Row,Cell),!;
-	Cell=empty.
+	nth0(X,Row,Cell),!.
+	%;
+	%Cell=empty.
 
 isValidCell(X,Y):-
 	X>=0,X=<7,Y>=0,Y=<7.
-
-
 
 
 setItemInList([_|RestOfList],0,NewValue,[NewValue|RestOfList]).
@@ -46,9 +61,6 @@ setCell(Board,X,Y,NewValue,NewBoard):-
 	nth0(Y,Board,Row),
 	setItemInList(Row,X,NewValue,NewRow),
 	setItemInList(Board,Y,NewRow,NewBoard).
-
-
-
 
 
 %%%% COUNTING THE PIECES ON THE BOARD
@@ -102,8 +114,8 @@ printRow([]).
 printRow([Head|RestOfRow]):-
 	write("\u2551 "),
 	(
-		Head=white,write('\u25C9');
-		Head=black,write('\u25CE');
+		Head=white,write('w');
+		Head=black,write('b');
 		Head=empty,write('\u0020')
 	),
 	write(" "),
@@ -211,7 +223,6 @@ isValidMove(Board,X,Y,Player):-
 	isValidCell(X,Y),!,
 	isCellEmpty(Board,X,Y),!,
 %	hasOpponentColorNeighbour(Board,X,Y,Player),
-
 	(
 		isValidMoveDirection(Board,Player,X,Y, 1, 1,_,_),!;
 		isValidMoveDirection(Board,Player,X,Y, 0, 1,_,_),!;
@@ -291,13 +302,19 @@ getAllValidMoves(Board,Player,[c(X,Y)|MoveList],ValidMoves):-
 humanMove(Board,Player,NextPlayer,NewBoard):-
 	getAllValidMoves(Board,Player,ValidMoves),
 	write("This is "), write(Player), writeln('s move'),
+	(ValidMoves == [],!,
+	write("No Valid Moves. Turn Pass"),
+	NewBoard = Board,
+	opponent(Player,NextPlayer)
+	;
 	write("Hint, possible moves are:"),
 	printPossibleMoves(ValidMoves),
 	getInput(X,"Enter X:"),
 	getInput(Y,"Enter Y:"),
 	isValidMove(Board,X,Y,Player),!,
 	opponent(Player,NextPlayer),
-	move(Board,X,Y,Player,NewBoard).
+	move(Board,X,Y,Player,NewBoard)
+	).
 
 humanMove(Board,Player,NextPlayer,NewBoard):-
 		writeln("#########################\nIllegal move. Please play again.\n#########################\n"),
@@ -308,22 +325,16 @@ play():-
 	init_board(Board0),
 	play(Board0,black).
 
+play(Board,_):-
+	game_over(Board,Winner),!,
+	(Winner == 'draw',
+	write("The Game Is Over With Draw!")
+	;
+	write("The Game Is Over. Player Who Play "), write(Winner), write(" Won!")
+	).
 
 play(Board,Player):-
 	printniceboard(Board),
 	printstatus(Board),
 	humanMove(Board,Player,NextPlayer,NextBoard),
 	play(NextBoard,NextPlayer).
-
-
-
-
-
-
-
-
-
-
-
-
-	

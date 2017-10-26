@@ -26,17 +26,34 @@ game_over(Board,Winner):-
 	FullBoard is (8*8), %board size
 	countBlacks(Board,Blacks),
 	countWhites(Board,Whites),
-	Blacks + Whites =:= FullBoard,!,
-	(Blacks > Whites,
-	Winner = 'black'
-	;
-	Whites > Blacks,
+	(
+	Blacks == 0,!,
 	Winner = 'white'
 	;
-	Winner = 'draw'
+	Whites == 0,!,
+	Winner = 'black'
+	;
+		Blacks + Whites =:= FullBoard,!,
+		(Blacks > Whites,
+		Winner = 'black'
+		;
+		Whites > Blacks,
+		Winner = 'white'
+		;
+		Winner = 'draw'
+		)
 	).
 	
-
+result(Winner):-
+	Winner == 'white',!,
+	write("You Lost!! :( ")
+	;
+	Winner == 'black',!,
+	write("You Won!! :) ")
+	;
+	write("Draw!! ").
+	
+	
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 getCell(Board,X,Y,Cell):-
@@ -61,6 +78,53 @@ setCell(Board,X,Y,NewValue,NewBoard):-
 	nth0(Y,Board,Row),
 	setItemInList(Row,X,NewValue,NewRow),
 	setItemInList(Board,Y,NewRow,NewBoard).
+
+%%%%%%%%%%%%%%%%%%%% ALPHA BETA %%%%%%%%%%%%%%%%%%%%%%%%%%
+
+alphabeta(Depth, p(Board,Player), Alpha, Beta, BestMove, Value):-
+  Depth > 0,
+  getAllValidMoves(Board,Player,Moves),
+  Moves = [_|_], !,
+  NewDepth is Depth - 1,
+  Alpha1 is -Beta,
+  Beta1 is -Alpha,
+  bestmove(Moves, p(Board,Player), NewDepth, Alpha1, Beta1, 0, BestMove, Value).
+  
+alphabeta(_, Position, _, _, 0, Value):-
+  value(Position, Value). % Depth is 0, or no moves left
+
+bestmove([c(X,Y)|Moves], p(Board,Player), Depth, Alpha, Beta, Move0, Move1, Value1):-
+  move(Board, X,Y,Player, NewBoard0), !,
+  swap_position(NewBoard0, NewBoard),
+  opponent(Player,NextPlayer),
+  alphabeta(Depth, p(NewBoard,NextPlayer), Alpha, Beta, _, MinusValue),
+  Value is -MinusValue,
+  cutoff(c(X,Y), Value, Depth, Alpha, Beta, Moves, p(Board,Player), Move0, Move1, Value1).
+bestmove([], _, _, Alpha, _, Move, Move, Alpha).
+
+cutoff(_, Value, Depth, Alpha, Beta, Moves, Position, Move0, Move1, Value1):-
+  Value =< Alpha, !,
+  bestmove(Moves, Position, Depth, Alpha, Beta, Move0, Move1, Value1).
+cutoff(Move, Value, Depth, _, Beta, Moves, Position, _, Move1, Value1):-
+  Value < Beta, !,
+  bestmove(Moves, Position, Depth, Value, Beta, Move, Move1, Value1).
+cutoff(Move, Value, _, _, _, _, _, _, Move, Value).
+
+value(p(Board,_), -100):-
+  game_over(Board,Winner),
+  Winner=='white',!.
+  
+value(p(Board,Player), Value):-
+  countBlacks(Board,Blacks),
+  countBlacks(Board,Whites),
+  (
+  Player == white,!,
+  Value is (100*(Whites-Blacks)/(Whites+Blacks))
+  ;
+  Value is (100*(Blacks-Whites)/(Blacks+Whites)),!
+  ).
+  
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 %%%% COUNTING THE PIECES ON THE BOARD
@@ -167,6 +231,24 @@ printPossibleMoves([c(X,Y)|Rest]):-
 
 opponent(white,black).
 opponent(black,white).
+
+swap_position([],[]):-!.
+swap_position([Row|RestBoard], [NewRow|NewRest]):-
+	swap_row(Row,NewRow),
+	swap_position(RestBoard,NewRest).
+
+swap_row([],[]):-!.
+swap_row([Cell|ResRow],[NewCell|NewRestRow]):-
+	(Cell == black,!,
+	NewCell = white
+	;
+	Cell == white,!,
+	NewCell = black
+	;
+	NewCell = empty,!
+	),
+	swap_row(ResRow,NewRestRow).
+	
 
 isCellEmpty(Board,X,Y):-
 	getCell(Board,X,Y,empty).
@@ -297,44 +379,47 @@ getAllValidMoves(Board,Player,[c(X,Y)|MoveList],[c(X,Y)|ValidMoves]):-
 getAllValidMoves(Board,Player,[c(X,Y)|MoveList],ValidMoves):-
 	getAllValidMoves(Board,Player,MoveList,ValidMoves).
 
-
-
-humanMove(Board,Player,NextPlayer,NewBoard):-
+choose_move(_,Board,Player,Board):-
 	getAllValidMoves(Board,Player,ValidMoves),
-	write("This is "), write(Player), writeln('s move'),
-	(ValidMoves == [],!,
-	write("No Valid Moves. Turn Pass"),
-	NewBoard = Board,
-	opponent(Player,NextPlayer)
-	;
+	ValidMoves == [],!,
+	write("No Valid Moves. Turn Pass").
+	
+choose_move(Depth,Board,white,NewBoard):-
+	alphabeta(Depth,p(Board,white), -100, 100, c(X,Y), _),
+	move(Board,X,Y,white,NewBoard),!.
+
+choose_move(_,Board,black,NewBoard):-
+	getAllValidMoves(Board,black,ValidMoves),
 	write("Hint, possible moves are:"),
 	printPossibleMoves(ValidMoves),
 	getInput(X,"Enter X:"),
 	getInput(Y,"Enter Y:"),
-	isValidMove(Board,X,Y,Player),!,
-	opponent(Player,NextPlayer),
-	move(Board,X,Y,Player,NewBoard)
-	).
+	isValidMove(Board,X,Y,black),!,
+	move(Board,X,Y,black,NewBoard).
 
-humanMove(Board,Player,NextPlayer,NewBoard):-
+choose_move(_,Board,black,NewBoard):-
 		writeln("#########################\nIllegal move. Please play again.\n#########################\n"),
-		humanMove(Board,Player,NextPlayer,NewBoard).
+		choose_move(_,Board,black,NewBoard).
 
+depth_limits(1, 4).
 
-play():-
+%%%%%%%%%%%%%%%%%%%%%%% START HERE %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+play(Depth):-
+	depth_limits(MinDepth, MaxDepth),
+	Depth >= MinDepth,
+	Depth =< MaxDepth,
 	init_board(Board0),
-	play(Board0,black).
-
-play(Board,_):-
-	game_over(Board,Winner),!,
-	(Winner == 'draw',
-	write("The Game Is Over With Draw!")
+	play(Depth, Board0,black),!
 	;
-	write("The Game Is Over. Player Who Play "), write(Winner), write(" Won!")
-	).
+	nl, write(`***Depth is outside limits***`), nl, fail.
 
-play(Board,Player):-
+play(_, Board, _):-
+	game_over(Board,Winner),!,
+	result(Winner).
+	
+play(Depth, Board, Player):-
 	printniceboard(Board),
 	printstatus(Board),
-	humanMove(Board,Player,NextPlayer,NextBoard),
-	play(NextBoard,NextPlayer).
+	choose_move(Depth,Board,Player,NextBoard),
+	opponent(Player,NextPlayer),
+	play(Depth, NextBoard,NextPlayer).

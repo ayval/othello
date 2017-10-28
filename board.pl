@@ -100,7 +100,10 @@ bestmove([c(X,Y)|Moves], p(Board,Player), Depth, Alpha, Beta, Move0, Move1, Valu
   alphabeta(Depth, p(NewBoard,NextPlayer), Alpha, Beta, _, MinusValue),
   Value is -MinusValue,
   cutoff(c(X,Y), Value, Depth, Alpha, Beta, Moves, p(Board,Player), Move0, Move1, Value1).
+
 bestmove([], _, _, Alpha, _, Move, Move, Alpha).
+
+bestmove([], _, _, _, Beta, Move, Move, Beta).
 
 cutoff(_, Value, Depth, Alpha, Beta, Moves, Position, Move0, Move1, Value1):-
   Value =< Alpha, !,
@@ -110,24 +113,46 @@ cutoff(Move, Value, Depth, _, Beta, Moves, Position, _, Move1, Value1):-
   bestmove(Moves, Position, Depth, Value, Beta, Move, Move1, Value1).
 cutoff(Move, Value, _, _, _, _, _, _, Move, Value).
 
-value(p(Board,_), -100):-
-  game_over(Board,Winner),
-  Winner=='white',!.
+%value(p(Board,_), -100):-
+%  game_over(Board,Winner),
+%  Winner=='white',!.
   
 value(p(Board,Player), Value):-
   countBlacks(Board,Blacks),
-  countBlacks(Board,Whites),
+  countWhites(Board,Whites),
+  %countWhiteCorners(Board,WhiteCorners),
+  %countBlackCorners(Board,BlackCorners),
   (
   Player == white,!,
-  Value is (100*(Whites-Blacks)/(Whites+Blacks))
+  Value is (100*(Whites-Blacks)/(Whites+Blacks))%+20*(WhiteCorners-BlackCorners)
   ;
-  Value is (100*(Blacks-Whites)/(Blacks+Whites)),!
+  Value is (100*(Blacks-Whites)/(Blacks+Whites))%+20*(BlackCorners-WhiteCorners),!
   ).
   
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%                        Heuristics                       %%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%% COUNTING THE CORENERS %%%%%
+
+countCorners(p(Board,Player,Value)):-
+	countCorners(p(Board,Player,[(0,0),(0,7),(7,0),(7,7)]),Value).
+
+countCorners(p(_,_),[],0).
+
+countCorners(p(Board,Player,[(X,Y)|Rest]),Value):-
+	countCorners(p(Board,Player),Rest,NextValue),
+	(getCell(Board,X,Y,Player),Value is NextValue+1,!;Value is NextValue).
+
+countBlackCorners(Board,BlackCorners):-
+	countCorners(p(Board,black,BlackCorners)).
 
 
-%%%% COUNTING THE PIECES ON THE BOARD
+countWhiteCorners(Board,WhiteCorners):-
+	countCorners(p(Board,white,WhiteCorners)).
+
+
+%%%% COUNTING THE PIECES ON THE BOARD %%%%%
 
 countValueInRow(Row,Value,ReturnCount):-
 	countValueInRow(Row,Value,0,ReturnCount).
@@ -385,7 +410,7 @@ choose_move(_,Board,Player,Board):-
 	write("No Valid Moves. Turn Pass").
 	
 choose_move(Depth,Board,white,NewBoard):-
-	alphabeta(Depth,p(Board,white), -100, 100, c(X,Y), _),
+	alphabeta(Depth,p(Board,white), -1000, 1000, c(X,Y), _),
 	move(Board,X,Y,white,NewBoard),!.
 
 choose_move(_,Board,black,NewBoard):-
@@ -401,7 +426,7 @@ choose_move(_,Board,black,NewBoard):-
 		writeln("#########################\nIllegal move. Please play again.\n#########################\n"),
 		choose_move(_,Board,black,NewBoard).
 
-depth_limits(1, 4).
+depth_limits(1, 6).
 
 %%%%%%%%%%%%%%%%%%%%%%% START HERE %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 play(Depth):-

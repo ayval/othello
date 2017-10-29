@@ -2,7 +2,7 @@
 
 init_board(Board):-
 	Board0 = [
-		[black,empty,empty,empty,empty,empty,empty,empty],
+		[empty,empty,empty,empty,empty,empty,empty,empty],
 		[empty,empty,empty,empty,empty,empty,empty,empty],
 		[empty,empty,empty,empty,empty,empty,empty,empty],
 		[empty,empty,empty,empty,empty,empty,empty,empty],
@@ -59,7 +59,7 @@ result(Winner):-
 getCell(Board,X,Y,Cell):-
 	isValidCell(X,Y),
 	nth0(Y,Board,Row),
-	nth0(X,Row,Cell),!,.
+	nth0(X,Row,Cell),!.
 	%;
 	%Cell=empty.
 
@@ -124,28 +124,52 @@ value(p(Board,Player), -100):-
   
 
 value(p(Board,Player), Value):-
+	coinValue(p(Board,Player),CoinsVal),
+	cornersValue(p(Board,Player),CornersVal),
+	mobilityValue(p(Board,Player),MobilityVal),
+	Value is CoinsVal + CornersVal + MobilityVal.
+	
+	
+%%% COVER CoinValue Heuristic Function For Coins Parity of Board %%%
+coinValue(p(Board,Player),Value):-
 	countBlacks(Board,Blacks),
 	countWhites(Board,Whites),
+	(
+	Player == white,!,
+	Value is 100*(Whites-Blacks)/(Whites+Blacks)
+	;
+	Value is 100*(Blacks-Whites)/(Blacks+Whites),!
+	).
+
+%%% COVER CornersValue Heuristic Function For Corners of Board %%%
+cornersValue(p(Board,Player),Value):-
 	countWhiteCorners(p(Board,Player),WhiteCorners),
 	countBlackCorners(p(Board,Player),BlackCorners),
 	(
-		WhiteCorners + BlackCorners =:= 0,!,
-		CornersValue = 0
+	WhiteCorners + BlackCorners =:= 0,!,
+	Value = 0
+	;
+	Player == white,!,
+	Value is 100*(WhiteCorners-BlackCorners)/(WhiteCorners+BlackCorners)
+	;
+	Value is 100*(BlackCorners-WhiteCorners)/(BlackCorners+WhiteCorners),!
+	).
+
+mobilityValue(p(Board,Player),Value):-
+	getAllValidMoves(Board,black,BlackMoves),
+	getAllValidMoves(Board,white,WhiteMoves),
+	length(BlackMoves,BlackCount),
+	length(WhiteMoves,WhiteCount),
+	%%% COVER MobilityValue Heuristic Function For Actual mobility of Board %%%
+	(
+		BlackCount + WhiteCount =:= 0,!,
+		Value = 0
 		;
 		Player == white,!,
-		CornersValue is 100*(WhiteCorners-BlackCorners)/(WhiteCorners+BlackCorners)
+		Value is 100*(WhiteCount-BlackCount)/(BlackCount + WhiteCount)
 		;
-		write('damn girl'),
-		CornersValue is 100*(BlackCorners-WhiteCorners)/(BlackCorners+WhiteCorners),!
-	),
-	(
-	Player == white,!,
-	Value is (100*(Whites-Blacks)/(Whites+Blacks))+20*CornersValue
-	;
-	Value is (100*(Blacks-Whites)/(Blacks+Whites))+20*CornersValue,!
+		Value is 100*(BlackCount-WhiteCount)/(BlackCount + WhiteCount),!
 	).
-	
-
   
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%                        Heuristics                       %%%

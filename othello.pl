@@ -33,7 +33,13 @@ game_over(Board,Winner):-
 	Whites == 0,!,
 	Winner = 'black'
 	;
-		Blacks + Whites =:= FullBoard,!,
+		(
+		Blacks + Whites =:= FullBoard,!
+		;
+		getAllValidMoves(Board,black,ValidMoves1),
+		getAllValidMoves(Board,white,ValidMoves2),
+		ValidMoves1 == [], ValidMoves2 == [],!
+		),
 		(Blacks > Whites,
 		Winner = 'black'
 		;

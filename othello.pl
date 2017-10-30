@@ -69,6 +69,18 @@ getCell(Board,X,Y,Cell):-
 	%;
 	%Cell=empty.
 
+
+isBlack(Board,X,Y,Value):-
+	getCell(Board,X,Y,Cell),
+	Cell==black,!,
+	Value=1;Value=0.
+
+isWhite(Board,X,Y,Value):-
+	getCell(Board,X,Y,Cell),
+	Cell==white,!,
+	Value=1;Value=0.
+
+
 isValidCell(X,Y):-
 	X>=0,X=<7,Y>=0,Y=<7.
 
@@ -129,6 +141,11 @@ value(p(Board,Player), -100):-
 	).
   
 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%                        Heuristics                       %%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+
 value(p(Board,Player), Value):-
 	coinValue(p(Board,Player),CoinsVal),
 	cornersValue(p(Board,Player),CornersVal),
@@ -149,16 +166,16 @@ coinValue(p(Board,Player),Value):-
 
 %%% COVER CornersValue Heuristic Function For Corners of Board %%%
 cornersValue(p(Board,Player),Value):-
-	countWhiteCorners(p(Board,Player),WhiteCorners),
-	countBlackCorners(p(Board,Player),BlackCorners),
+	countWhiteCorners(Board,WhiteCorners),
+	countBlackCorners(Board,BlackCorners),
 	(
 	WhiteCorners + BlackCorners =:= 0,!,
 	Value = 0
 	;
 	Player == white,!,
-	Value is 100*(WhiteCorners-BlackCorners)/(WhiteCorners+BlackCorners)
+	Value is 25*(WhiteCorners-BlackCorners)
 	;
-	Value is 100*(BlackCorners-WhiteCorners)/(BlackCorners+WhiteCorners),!
+	Value is 25*(BlackCorners-WhiteCorners),!
 	).
 
 mobilityValue(p(Board,Player),Value):-
@@ -176,33 +193,26 @@ mobilityValue(p(Board,Player),Value):-
 		;
 		Value is 100*(BlackCount-WhiteCount)/(BlackCount + WhiteCount),!
 	).
-  
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%                        Heuristics                       %%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%%%% COUNTING THE CORENERS %%%%%
 
-countCorners(Position,Value):-
-	countCorners(Position,[(0,0),(0,7),(7,0),(7,7)],Value).
+%%%% COUNTING THE CORNERS %%%%%
 
-countCorners(_,[],0):-!.
-
-countCorners(p(Board,Player),[(X,Y)|Rest],Value):-
-	countCorners(p(Board,Player),Rest,NextValue),
-	(
-	getCell(Board,X,Y,Player),
-	Value is NextValue+1
-	;
-	Value is NextValue
-	).
 
 countBlackCorners(Board,BlackCorners):-
-	countCorners(p(Board,black),BlackCorners).
+	isBlack(Board,0,0,C1),
+	isBlack(Board,0,7,C2),
+	isBlack(Board,7,0,C3),
+	isBlack(Board,7,7,C4),
+	BlackCorners is C1+C2+C3+C4.
+
+
 
 countWhiteCorners(Board,WhiteCorners):-
-	countCorners(p(Board,white),WhiteCorners).
-
+	isWhite(Board,0,0,C1),
+	isWhite(Board,0,7,C2),
+	isWhite(Board,7,0,C3),
+	isWhite(Board,7,7,C4),
+	WhiteCorners is C1+C2+C3+C4.
 
 %%%% COUNTING THE PIECES ON THE BOARD %%%%%
 
@@ -492,6 +502,8 @@ play(Depth):-
 
 play(_, Board, _):-
 	game_over(Board,Winner),!,
+	printniceboard(Board),
+	printstatus(Board),
 	result(Winner).
 	
 play(Depth, Board, Player):-

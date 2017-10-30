@@ -66,9 +66,6 @@ getCell(Board,X,Y,Cell):-
 	isValidCell(X,Y),
 	nth0(Y,Board,Row),
 	nth0(X,Row,Cell),!.
-	%;
-	%Cell=empty.
-
 
 isBlack(Board,X,Y,Value):-
 	getCell(Board,X,Y,Cell),
@@ -80,6 +77,10 @@ isWhite(Board,X,Y,Value):-
 	Cell==white,!,
 	Value=1;Value=0.
 
+isEmpty(Board,X,Y,Value):-
+	getCell(Board,X,Y,Cell),
+	Cell==empty,!,
+	Value=1;Value=0.
 
 isValidCell(X,Y):-
 	X>=0,X=<7,Y>=0,Y=<7.
@@ -131,7 +132,7 @@ cutoff(Move, Value, Depth, _, Beta, Moves, Position, _, Move1, Value1):-
   bestmove(Moves, Position, Depth, Value, Beta, Move, Move1, Value1).
 cutoff(Move, Value, _, _, _, _, _, _, Move, Value).
 
-value(p(Board,Player), -100):-
+value(p(Board,Player), -1000):-
 	opponent(Player,NextPlayer),
 	game_over(Board,Winner),
 	(
@@ -150,7 +151,8 @@ value(p(Board,Player), Value):-
 	coinValue(p(Board,Player),CoinsVal),
 	cornersValue(p(Board,Player),CornersVal),
 	mobilityValue(p(Board,Player),MobilityVal),
-	Value is CoinsVal + CornersVal + MobilityVal.
+	riskySpotsValue(p(Board,Player),RiskySpotsValue),
+	Value is CoinsVal + CornersVal + MobilityVal + RiskySpotsValue.
 	
 	
 %%% COVER CoinValue Heuristic Function For Coins Parity of Board %%%
@@ -159,7 +161,7 @@ coinValue(p(Board,Player),Value):-
 	countWhites(Board,Whites),
 	(
 	Player == white,!,
-	Value is 100*(Whites-Blacks)/(Whites+Blacks)
+	Value is 100*(Whites-Blacks)/(Whites+Blacks)    
 	;
 	Value is 100*(Blacks-Whites)/(Blacks+Whites),!
 	).
@@ -194,9 +196,25 @@ mobilityValue(p(Board,Player),Value):-
 		Value is 100*(BlackCount-WhiteCount)/(BlackCount + WhiteCount),!
 	).
 
+%%% COVER Risky spots Heuristic Function For the risky spots on the Board %%%
+riskySpotsValue(p(Board,Player),Value):-
+	countBlackRiskySpots(Board,BlackRiskySpots),
+	countWhiteRiskySpots(Board,WhiteRiskySpots),
+	(
+	WhiteRiskySpots + BlackRiskySpots =:= 0,!,
+	Value = 0
+	;
+	Player == white,!,
+	Value is 25*(BlackRiskySpots-WhiteRiskySpots)      %these are "negative values" so black-white is positive for white
+	;
+	Value is 25*(WhiteRiskySpots-BlackRiskySpots),!    %ditto
+	).
+
+
+
+
 
 %%%% COUNTING THE CORNERS %%%%%
-
 
 countBlackCorners(Board,BlackCorners):-
 	isBlack(Board,0,0,C1),
@@ -205,14 +223,33 @@ countBlackCorners(Board,BlackCorners):-
 	isBlack(Board,7,7,C4),
 	BlackCorners is C1+C2+C3+C4.
 
-
-
 countWhiteCorners(Board,WhiteCorners):-
 	isWhite(Board,0,0,C1),
 	isWhite(Board,0,7,C2),
 	isWhite(Board,7,0,C3),
 	isWhite(Board,7,7,C4),
 	WhiteCorners is C1+C2+C3+C4.
+
+
+
+
+%%% COUNTING UNCOVERED RISKY SPOTS %%%%%%%
+%%% These are the places diagionally next to the corners if the corners are empty
+
+countBlackRiskySpots(Board,BlackRiskySpots):-
+	isBlack(Board,1,1,C1),isEmpty(Board,0,0,R1),
+	isBlack(Board,1,6,C2),isEmpty(Board,0,7,R2),
+	isBlack(Board,6,1,C3),isEmpty(Board,7,0,R3),
+	isBlack(Board,6,6,C4),isEmpty(Board,7,7,R4),
+	BlackRiskySpots is C1*R1+C2*R2+C3*R3+C4*R4.
+
+countWhiteRiskySpots(Board,WhiteRiskySpots):-
+	isWhite(Board,1,1,C1),isEmpty(Board,0,0,R1),
+	isWhite(Board,1,6,C2),isEmpty(Board,0,7,R2),
+	isWhite(Board,6,1,C3),isEmpty(Board,7,0,R3),
+	isWhite(Board,6,6,C4),isEmpty(Board,7,7,R4),
+	WhiteRiskySpots is C1*R1+C2*R2+C3*R3+C4*R4.
+
 
 %%%% COUNTING THE PIECES ON THE BOARD %%%%%
 
@@ -352,21 +389,19 @@ areAllNeighboursEmpty(Board,X,Y):-
 	isCellEmpty(Board,XT,YT).
 
 hasOpponentColorNeighbour(Board,X,Y,Color):-
-	writeln("Enter has oppponent color neighbour"),
 	(
 		XT is X+1,XB is X-1,YT is X+1,YB is Y-1,opponent(Color,OColor)
 	),
 	(	
-		(writeln(bla0),X>0,Y>0,getCell(Board,XB,YB,OColor));
-		(writeln(bla1),X>0,    getCell(Board,XB,Y,OColor));
-		(writeln(bla2),X>0,Y<7,getCell(Board,XB,YT,OColor));
-		(writeln(bla3),Y>0,    getCell(Board,X,YB,OColor));
-		(writeln(bla4),Y<7,    getCell(Board,X,YT,OColor));
-		(writeln(bla5),Y>0,X<7,getCell(Board,XT,YB,OColor));
-		(writeln(bla6),X<7,    getCell(Board,XT,Y,OColor));
-		(writeln(bla7),X<7,Y>7,getCell(Board,XT,YT,OColor))
-	),!,
-	writeln("\nhasOpponentColorNeighbour returned successfully\n").
+		(X>0,Y>0,getCell(Board,XB,YB,OColor));
+		(X>0,    getCell(Board,XB,Y,OColor));
+		(X>0,Y<7,getCell(Board,XB,YT,OColor));
+		(Y>0,    getCell(Board,X,YB,OColor));
+		(Y<7,    getCell(Board,X,YT,OColor));
+		(Y>0,X<7,getCell(Board,XT,YB,OColor));
+		(X<7,    getCell(Board,XT,Y,OColor));
+		(X<7,Y>7,getCell(Board,XT,YT,OColor))
+	),!.
 
 
 findNextCellSameColor(Board,Player,X,Y,XD,YD,XNR,YNR):-

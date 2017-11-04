@@ -1,5 +1,5 @@
 /**********************    OTHELLO ****************************
-Programmers: Dor Zohar
+Programmers: Avyal Ron And Dor Zohar
 
 Description: Othello is a strategy board game for two players, played on an 8×8 uncheckered board.
 There are sixty-four identical game pieces called disks (often spelled "discs"),
@@ -29,7 +29,7 @@ play(Depth):-
 	init_board(Board0),
 	play(Depth, Board0,black),!
 	;
-	nl, write(`***Depth is outside limits***`), nl, fail.
+	nl, write('***Depth is outside limits***'), nl, fail.
 
 play(_, Board, _):-
 	game_over(Board,Winner),!,
@@ -539,10 +539,3 @@ getAllValidMoves(Board,Player,[c(X,Y)|MoveList],[c(X,Y)|ValidMoves]):-
 
 getAllValidMoves(Board,Player,[c(X,Y)|MoveList],ValidMoves):-
 	getAllValidMoves(Board,Player,MoveList,ValidMoves).
-
-
-
-
-
-
-

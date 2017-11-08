@@ -35,7 +35,8 @@ init_board(N,Board):-
 %Winner will be populate 'draw' in case of draw..
 
 game_over(Board,Winner):-
-	FullBoard is (8*8), %board size
+	length(Board,N),
+	FullBoard is (N*N), %board size
 	countBlacks(Board,Blacks),
 	countWhites(Board,Whites),
 	(

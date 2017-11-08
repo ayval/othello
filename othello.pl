@@ -1,93 +1,34 @@
-/**********************    OTHELLO ****************************
-Programmers: Avyal Ron And Dor Zohar
-
-Description: Othello is a strategy board game for two players, played on an 8×8 uncheckered board.
-There are sixty-four identical game pieces called disks (often spelled "discs"),
-which are light on one side and dark on the other.
-Players take turns placing disks on the board with their assigned color facing up.
-During a play, any disks of the opponent's color that are in a straight line
-and bounded by the disk just placed and another disk
-of the current player's color are turned over to the current player's color.
-
-Input: play(x). where x is between 1 to 6 (for example play(3). ). (the number is represent the deep that alphabeta search will do,
-so by that its mean the diffuclty of the game).
-
-Output: Win/Lose after playing.
-
-Synopsys: the @ represent the white player (Computer) and # is you, the player.
-in each turn the player need to submit the X cordinate, and afterwards (the output direct if the X was valid)
-the player have to submit the Y cordinate of the coin that he want to put on the board.
-
-****************************************************************/
-
-
-%%%%%%%%%%%%%%%%%%%%%%% START HERE %%%%%%%%%%%%%%%%%%%%%%%%%%%%
-play(Depth):-
-	depth_limits(MinDepth, MaxDepth),
-	Depth >= MinDepth,
-	Depth =< MaxDepth,
-	init_board(Board0),
-	play(Depth, Board0,black),!
-	;
-	nl, write('***Depth is outside limits***'), nl, fail.
-
-play(_, Board, _):-
-	game_over(Board,Winner),!,
-	printniceboard(Board),
-	printstatus(Board),
-	result(Winner).
-	
-play(Depth, Board, Player):-
-	printniceboard(Board),
-	printstatus(Board),
-	choose_move(Depth,Board,Player,NextBoard),
-	opponent(Player,NextPlayer),
-	play(Depth, NextBoard,NextPlayer).
-
-depth_limits(1, 6).
-
-%%%%%%%%%%%% CHOOSE MOVE %%%%%%%%%%%%%%%%%%%%%%%%
-choose_move(_,Board,Player,Board):-
-	getAllValidMoves(Board,Player,ValidMoves),
-	ValidMoves == [],!,
-	write("No Valid Moves. Turn Pass").
-	
-choose_move(Depth,Board,white,NewBoard):-
-	alphabeta(Depth,p(Board,white), -1000, 1000, c(X,Y), _),
-	move(Board,X,Y,white,NewBoard),!.
-
-choose_move(_,Board,black,NewBoard):-
-	getAllValidMoves(Board,black,ValidMoves),
-	write("Hint, possible moves are:"),
-	printPossibleMoves(ValidMoves),
-	getInput(X,"Enter X:"),
-	getInput(Y,"Enter Y:"),
-	isValidMove(Board,X,Y,black),!,
-	move(Board,X,Y,black,NewBoard).
-
-choose_move(_,Board,black,NewBoard):-
-		writeln("#########################\nIllegal move. Please play again.\n#########################\n"),
-		choose_move(_,Board,black,NewBoard).
-		
 %%%%%%%%%%% INIT THE BOARD %%%%%%%%%%%%%%%%%%%%%%
+init_empty_row(0,[]).
+
+init_empty_row(N,[empty|RestOfRow]):-
+	N1 is N-1,
+	init_empty_row(N1,RestOfRow).
+
+init_empty_board(N,Board):-
+	init_empty_board(N,N,Board).
+
+init_empty_board(0,_,[]).
+
+init_empty_board(N,OrgN,[Row|RestOfBoard]):-
+	N1 is N-1,
+	init_empty_row(OrgN,Row),
+	init_empty_board(N1,OrgN,RestOfBoard).
+
 
 init_board(Board):-
-	Board0 = [
-		[empty,empty,empty,empty,empty,empty,empty,empty],
-		[empty,empty,empty,empty,empty,empty,empty,empty],
-		[empty,empty,empty,empty,empty,empty,empty,empty],
-		[empty,empty,empty,empty,empty,empty,empty,empty],
-		[empty,empty,empty,empty,empty,empty,empty,empty],
-		[empty,empty,empty,empty,empty,empty,empty,empty],
-		[empty,empty,empty,empty,empty,empty,empty,empty],
-		[empty,empty,empty,empty,empty,empty,empty,empty]
-	],
-	setCell(Board0,3,3,white,Board1),
-	setCell(Board1,4,4,white,Board2),
-	setCell(Board2,3,4,black,Board3),
-	setCell(Board3,4,3,black,Board).
+	init_board(8,Board).
 
+init_board(N,Board):-
+	init_empty_board(N,Board0),
+	L1 is floor(N/2)-1,
+	L2 is floor(N/2),
+	setCell(Board0,L1,L1,white,Board1),
+	setCell(Board1,L2,L2,white,Board2),
+	setCell(Board2,L1,L2,black,Board3),
+	setCell(Board3,L2,L1,black,Board).
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%% GAME OVER %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %If game is over, IsOver will be populate with the winning player color
@@ -130,6 +71,52 @@ result(Winner):-
 	;
 	write("Draw!! ").
 	
+	
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% helper functions
+
+
+isValidCell(X,Y,Board):-
+	length(Board,L),
+	X>=0,X<L,Y>=0,Y<L.
+
+
+getCell(Board,X,Y,Cell):-
+	isValidCell(X,Y,Board),
+	nth0(Y,Board,Row),
+	nth0(X,Row,Cell),!.
+
+
+%%the following 3 predicates return 1 if X,Y match the spot value or 0 if not
+isBlack(Board,X,Y,Value):-
+	getCell(Board,X,Y,Cell),
+	Cell==black,!,
+	
+	Value=1;Value=0.
+
+isWhite(Board,X,Y,Value):-
+	getCell(Board,X,Y,Cell),
+	Cell==white,!,
+	Value=1;Value=0.
+
+
+isEmpty(Board,X,Y,Value):-
+	getCell(Board,X,Y,Cell),
+	Cell==empty,!,
+	Value=1;Value=0.
+
+
+setItemInList([_|RestOfList],0,NewValue,[NewValue|RestOfList]).
+
+setItemInList([Head|RestOfList],X,NewValue,[Head|NewRestOfList]):-
+	NewX is X-1,
+	setItemInList(RestOfList,NewX,NewValue,NewRestOfList),!.
+
+
+setCell(Board,X,Y,NewValue,NewBoard):-
+	nth0(Y,Board,Row),
+	setItemInList(Row,X,NewValue,NewRow),
+	setItemInList(Board,Y,NewRow,NewBoard).
 
 %%%%%%%%%%%%%%%%%%%% ALPHA BETA %%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -147,6 +134,7 @@ alphabeta(_, Position, _, _, 0, Value):-
 
 bestmove([c(X,Y)|Moves], p(Board,Player), Depth, Alpha, Beta, Move0, Move1, Value1):-
   move(Board, X,Y,Player, NewBoard0), !,
+  %swap_position(NewBoard0, NewBoard),
   opponent(Player,NextPlayer),
   alphabeta(Depth, p(NewBoard0,NextPlayer), Alpha, Beta, _, MinusValue),
   Value is -MinusValue,
@@ -237,49 +225,54 @@ riskySpotsValue(p(Board,Player),Value):-
 	Value = 0
 	;
 	Player == white,!,
-	Value is 25*(BlackRiskySpots-WhiteRiskySpots)      %these are "negative values" so black-white is positive for white
+	Value is 15*(BlackRiskySpots-WhiteRiskySpots)      %these are "negative values" so black-white is positive for white
 	;
-	Value is 25*(WhiteRiskySpots-BlackRiskySpots),!    %ditto
+	Value is 15*(WhiteRiskySpots-BlackRiskySpots),!    %ditto
 	).
-
-
-
 
 
 %%%% COUNTING THE CORNERS %%%%%
 
 countBlackCorners(Board,BlackCorners):-
+	length(Board,L),
+	E is L-1,
 	isBlack(Board,0,0,C1),
-	isBlack(Board,0,7,C2),
-	isBlack(Board,7,0,C3),
-	isBlack(Board,7,7,C4),
+	isBlack(Board,0,E,C2),
+	isBlack(Board,E,0,C3),
+	isBlack(Board,E,E,C4),
 	BlackCorners is C1+C2+C3+C4.
 
 countWhiteCorners(Board,WhiteCorners):-
+	length(Board,L),
+	E is L-1,
 	isWhite(Board,0,0,C1),
-	isWhite(Board,0,7,C2),
-	isWhite(Board,7,0,C3),
-	isWhite(Board,7,7,C4),
+	isWhite(Board,0,E,C2),
+	isWhite(Board,E,0,C3),
+	isWhite(Board,E,E,C4),
 	WhiteCorners is C1+C2+C3+C4.
-
-
 
 
 %%% COUNTING UNCOVERED RISKY SPOTS %%%%%%%
 %%% These are the places diagionally next to the corners if the corners are empty
 
 countBlackRiskySpots(Board,BlackRiskySpots):-
+	length(Board,L),
+	E is L-2,
+	F is L-1,
 	isBlack(Board,1,1,C1),isEmpty(Board,0,0,R1),
-	isBlack(Board,1,6,C2),isEmpty(Board,0,7,R2),
-	isBlack(Board,6,1,C3),isEmpty(Board,7,0,R3),
-	isBlack(Board,6,6,C4),isEmpty(Board,7,7,R4),
+	isBlack(Board,1,E,C2),isEmpty(Board,0,F,R2),
+	isBlack(Board,E,1,C3),isEmpty(Board,F,0,R3),
+	isBlack(Board,E,E,C4),isEmpty(Board,F,F,R4),
 	BlackRiskySpots is C1*R1+C2*R2+C3*R3+C4*R4.
 
 countWhiteRiskySpots(Board,WhiteRiskySpots):-
+	length(Board,L),
+	E is L-2,
+	F is L-1,
 	isWhite(Board,1,1,C1),isEmpty(Board,0,0,R1),
-	isWhite(Board,1,6,C2),isEmpty(Board,0,7,R2),
-	isWhite(Board,6,1,C3),isEmpty(Board,7,0,R3),
-	isWhite(Board,6,6,C4),isEmpty(Board,7,7,R4),
+	isWhite(Board,1,E,C2),isEmpty(Board,0,F,R2),
+	isWhite(Board,E,1,C3),isEmpty(Board,F,0,R3),
+	isWhite(Board,E,E,C4),isEmpty(Board,F,F,R4),
 	WhiteRiskySpots is C1*R1+C2*R2+C3*R3+C4*R4.
 
 
@@ -325,17 +318,52 @@ boardIsFull(Board):-
 
 %%%% PRINTING THE BOARD %%%%%%%%%%%%%%%%%%
 
-printtopline():- 
-	write("\n\n\n  0   1   2   3   4   5   6   7   \n"),
-	write("\u2554\u2550\u2550\u2550\u2566\u2550\u2550\u2550\u2566\u2550\u2550\u2550\u2566\u2550\u2550\u2550\u2566\u2550\u2550\u2550\u2566\u2550\u2550\u2550\u2566\u2550\u2550\u2550\u2566\u2550\u2550\u2550\u2557\n").
+printanyline(Start,Mid,End,N):-
+	write(Start),
+	printanyline(Mid,N,2),
+	writeln(End).
+
+printanyline(_,N,N):-
+	true,!.
+
+printanyline(Mid,N,T):-
+	write(Mid),
+	NewT is T+1,
+	printanyline(Mid,N,NewT).
+
+printtopline1(N):-
+	write("\n\n\n"),
+	printtopline1(N,0),
+	write("\n").
+
+printtopline1(N,N):-
+	true,!.
+
+printtopline1(N,T):-
+	write("  "),write(T),write(" "),
+	NewT is T+1,
+	printtopline1(N,NewT).
+
+printtopline2(N):-
+	printanyline("\u2554\u2550\u2550\u2550","\u2566\u2550\u2550\u2550","\u2566\u2550\u2550\u2550\u2557",N).
+
+printmedline1(N):-
+	printanyline("\u2560\u2550\u2550\u2550","\u256C\u2550\u2550\u2550","\u256C\u2550\u2550\u2550\u2563",N).
+
+printmedline2(N):-
+	printanyline("\u255A\u2550\u2550\u2550","\u2569\u2550\u2550\u2550","\u2569\u2550\u2550\u2550\u255D",N).
+
+printtopline(N):- 
+	printtopline1(N),
+	printtopline2(N).
 
 printRow([]).
 
 printRow([Head|RestOfRow]):-
 	write("\u2551 "),
 	(
-		Head=white,write('@');
-		Head=black,write('#');
+		Head=white,write('w');
+		Head=black,write('b');
 		Head=empty,write('\u0020')
 	),
 	write(" "),
@@ -347,7 +375,8 @@ printnicerow(Row,X):-
 	writeln(X).
 
 printniceboard(Board):-
-	printtopline(),
+	length(Board,L),
+	printtopline(L),
 	printBoard(Board,0).
 
 
@@ -355,12 +384,14 @@ printBoard([],_):-
 	writeln('').
 
 printBoard([Row|RestOfBoard],X):-
+	length(Row,L),
+	RealL is L-1,
 	Xs is X+1,
 	printnicerow(Row,X),
 	(
-		(X<7,write("\u2560\u2550\u2550\u2550\u256C\u2550\u2550\u2550\u256C\u2550\u2550\u2550\u256C\u2550\u2550\u2550\u256C\u2550\u2550\u2550\u256C\u2550\u2550\u2550\u256C\u2550\u2550\u2550\u256C\u2550\u2550\u2550\u2563\n"))
+		(X<RealL,printmedline1(L))
 	;
-		(X=7,write("\u255A\u2550\u2550\u2550\u2569\u2550\u2550\u2550\u2569\u2550\u2550\u2550\u2569\u2550\u2550\u2550\u2569\u2550\u2550\u2550\u2569\u2550\u2550\u2550\u2569\u2550\u2550\u2550\u2569\u2550\u2550\u2550\u255D\n"))
+		(X=RealL,printmedline2(L))
 	),
 	printBoard(RestOfBoard,Xs),!.
 
@@ -388,64 +419,44 @@ printPossibleMoves([c(X,Y)|Rest]):-
 opponent(white,black).
 opponent(black,white).
 
-getCell(Board,X,Y,Cell):-
-	isValidCell(X,Y),
-	nth0(Y,Board,Row),
-	nth0(X,Row,Cell),!.
+swap_position([],[]):-!.
+swap_position([Row|RestBoard], [NewRow|NewRest]):-
+	swap_row(Row,NewRow),
+	swap_position(RestBoard,NewRest).
 
-isBlack(Board,X,Y,Value):-
-	getCell(Board,X,Y,Cell),
-	Cell==black,!,
-	Value=1;Value=0.
-
-isWhite(Board,X,Y,Value):-
-	getCell(Board,X,Y,Cell),
-	Cell==white,!,
-	Value=1;Value=0.
-
-isEmpty(Board,X,Y,Value):-
-	getCell(Board,X,Y,Cell),
-	Cell==empty,!,
-	Value=1;Value=0.
-
-isValidCell(X,Y):-
-	X>=0,X=<7,Y>=0,Y=<7.
-
-
-setItemInList([_|RestOfList],0,NewValue,[NewValue|RestOfList]).
-
-setItemInList([Head|RestOfList],X,NewValue,[Head|NewRestOfList]):-
-	NewX is X-1,
-	setItemInList(RestOfList,NewX,NewValue,NewRestOfList),!.
-
-
-setCell(Board,X,Y,NewValue,NewBoard):-
-	nth0(Y,Board,Row),
-	setItemInList(Row,X,NewValue,NewRow),
-	setItemInList(Board,Y,NewRow,NewBoard).
+swap_row([],[]):-!.
+swap_row([Cell|ResRow],[NewCell|NewRestRow]):-
+	(Cell == black,!,
+	NewCell = white
+	;
+	Cell == white,!,
+	NewCell = black
+	;
+	NewCell = empty,!
+	),
+	swap_row(ResRow,NewRestRow).
+	
 
 isCellEmpty(Board,X,Y):-
 	getCell(Board,X,Y,empty).
 
-hasOpponentColorNeighbour(Board,X,Y,Color):-
-	(
-		XT is X+1,XB is X-1,YT is X+1,YB is Y-1,opponent(Color,OColor)
-	),
-	(	
-		(X>0,Y>0,getCell(Board,XB,YB,OColor));
-		(X>0,    getCell(Board,XB,Y,OColor));
-		(X>0,Y<7,getCell(Board,XB,YT,OColor));
-		(Y>0,    getCell(Board,X,YB,OColor));
-		(Y<7,    getCell(Board,X,YT,OColor));
-		(Y>0,X<7,getCell(Board,XT,YB,OColor));
-		(X<7,    getCell(Board,XT,Y,OColor));
-		(X<7,Y>7,getCell(Board,XT,YT,OColor))
-	),!.
+areAllNeighboursEmpty(Board,X,Y):-
+	XT is X+1,XB is X-1,YT is X+1,YB is Y-1,
+	isCellEmpty(Board,XB,YB),
+	isCellEmpty(Board,XB,Y),
+	isCellEmpty(Board,XB,YT),
+	isCellEmpty(Board,X,YB),
+	isCellEmpty(Board,X,YT),
+	isCellEmpty(Board,XT,YB),
+	isCellEmpty(Board,XT,Y),
+	isCellEmpty(Board,XT,YT).
 
 
 findNextCellSameColor(Board,Player,X,Y,XD,YD,XNR,YNR):-
-	X+XD>=0,X+XD=<7,XN is X+XD,
-	Y+YD>=0,Y+YD=<7,YN is Y+YD,
+	length(Board,N1),
+	N is N1-1,
+	X+XD>=0,X+XD=<N,XN is X+XD,
+	Y+YD>=0,Y+YD=<N,YN is Y+YD,
 	opponent(Player,OtherPlayer),
 	(
 		(getCell(Board,XN,YN,OtherPlayer),findNextCellSameColor(Board,Player,XN,YN,XD,YD,XNR,YNR));
@@ -463,9 +474,8 @@ isValidMoveDirection(Board,Player,X,Y,XD,YD,XNR,YNR):-
 
 
 isValidMove(Board,X,Y,Player):-
-	isValidCell(X,Y),!,
+	isValidCell(X,Y,Board),!,
 	isCellEmpty(Board,X,Y),!,
-%	hasOpponentColorNeighbour(Board,X,Y,Player),
 	(
 		isValidMoveDirection(Board,Player,X,Y, 1, 1,_,_),!;
 		isValidMoveDirection(Board,Player,X,Y, 0, 1,_,_),!;
@@ -527,7 +537,9 @@ getInput(X,Msg):-
 	getInput(X,Msg).
 
 getAllValidMoves(Board,Player,ValidMoves):-
-	findall(c(X,Y),(between(0,7,X),between(0,7,Y)),MoveMatrix),
+	length(Board,N1),
+	N is N1-1,
+	findall(c(X,Y),(between(0,N,X),between(0,N,Y)),MoveMatrix),
 	getAllValidMoves(Board,Player,MoveMatrix,ValidMoves).
 
 getAllValidMoves(_,_,[],[]).
@@ -537,5 +549,60 @@ getAllValidMoves(Board,Player,[c(X,Y)|MoveList],[c(X,Y)|ValidMoves]):-
 	getAllValidMoves(Board,Player,MoveList,ValidMoves).
 
 
-getAllValidMoves(Board,Player,[c(X,Y)|MoveList],ValidMoves):-
+getAllValidMoves(Board,Player,[_|MoveList],ValidMoves):-
 	getAllValidMoves(Board,Player,MoveList,ValidMoves).
+
+choose_move(_,Board,Player,Board):-
+	getAllValidMoves(Board,Player,ValidMoves),
+	ValidMoves == [],!,
+	write("No Valid Moves. Turn Pass").
+	
+choose_move(Depth,Board,white,NewBoard):-
+	alphabeta(Depth,p(Board,white), -1000, 1000, c(X,Y), _),
+	move(Board,X,Y,white,NewBoard),!.
+
+choose_move(_,Board,black,NewBoard):-
+	getAllValidMoves(Board,black,ValidMoves),
+	write("Hint, possible moves are:"),
+	printPossibleMoves(ValidMoves),
+	getInput(X,"Enter X:"),
+	getInput(Y,"Enter Y:"),
+	isValidMove(Board,X,Y,black),!,
+	move(Board,X,Y,black,NewBoard).
+
+choose_move(_,Board,black,NewBoard):-
+		writeln("#########################\nIllegal move. Please play again.\n#########################\n"),
+		choose_move(_,Board,black,NewBoard).
+
+depth_limits(1, 5).
+
+%%%%%%%%%%%%%%%%%%%%%%% START HERE %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+play():-
+	play(3,8).
+
+
+play(Depth):-
+	play(Depth,8).
+
+play(Depth,N):-
+	depth_limits(MinDepth, MaxDepth),
+	Depth >= MinDepth,
+	Depth =< MaxDepth,
+	init_board(N,Board0),
+	play(Depth, Board0,black),!
+	;
+	nl, write(`***Depth is outside limits***`), nl, fail.
+
+play(_, Board, _):-
+	game_over(Board,Winner),!,
+	printniceboard(Board),
+	printstatus(Board),
+	result(Winner).
+	
+play(Depth, Board, Player):-
+	printniceboard(Board),
+	printstatus(Board),
+	choose_move(Depth,Board,Player,NextBoard),
+	opponent(Player,NextPlayer),
+	play(Depth, NextBoard,NextPlayer).

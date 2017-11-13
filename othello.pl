@@ -1,6 +1,5 @@
 /**********************    OTHELLO ****************************
 Programmers: Avyal Ron And Dor Zohar
-
 Description taken from wikipedia (https://en.wikipedia.org/wiki/Reversi).
 Description: Othello is a strategy board game for two players, played on an 8×8 uncheckered board.
 There are sixty-four identical game pieces called disks (often spelled "discs"),
@@ -40,7 +39,7 @@ play(Depth,N):-
 	init_board(N,Board0),
 	play(Depth, Board0,black),!
 	;
-	nl, write(`***Depth or Size are outside limits***`), nl, fail.
+	nl, write('***Depth or Size are outside limits***'), nl, fail.
 
 play(_, Board, _):-
 	game_over(Board,Winner),!,
@@ -636,6 +635,3 @@ setCell(Board,X,Y,NewValue,NewBoard):-
 	nth0(Y,Board,Row),
 	setItemInList(Row,X,NewValue,NewRow),
 	setItemInList(Board,Y,NewRow,NewBoard).
-
-
-
